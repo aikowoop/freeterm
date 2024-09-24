@@ -1,22 +1,17 @@
-FROM ubuntu:20.04
+# Utiliser la dernière version de PHP avec Apache
+FROM php:8.1-apache
 
-# Installer les dépendances nécessaires
-RUN apt-get update && apt-get install -y openssh-server sudo nginx
+# Activer le module mod_rewrite
+RUN a2enmod rewrite
 
-# Configurer SSH
-RUN mkdir /run/sshd
-RUN useradd -m -s /bin/bash renderuser && echo 'renderuser:password' | chpasswd && adduser renderuser sudo
-RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
-RUN echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
-RUN echo 'root:password' | chpasswd
+# Créer un répertoire pour l'application
+WORKDIR /var/www/html
 
-# Configurer Nginx pour écouter sur le port défini par Render
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf
-RUN sed -i "s/listen 80 default_server;/listen ${PORT} default_server;/" /etc/nginx/sites-available/default
+# Modifier les droits d'utilisateur pour Apache
+RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
 
-# Exposer les ports 22 (SSH) et le port pour HTTP (via Render)
-EXPOSE 22
-EXPOSE 80
+# Copier votre code dans le conteneur
+COPY . /var/www/html
 
-# Commande pour démarrer à la fois SSH et Nginx
-CMD service ssh start && nginx
+# Définir les permissions pour l'utilisateur web
+RUN chown -R www-data:www-data /var/www/html
